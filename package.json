@@ -1,0 +1,28 @@
+{
+  "name": "react-native-pure-router",
+  "version": "0.0.1",
+  "description": "react native router",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/musicode/react-native-pure-router.git"
+  },
+  "keywords": [
+    "react",
+    "native",
+    "router"
+  ],
+  "author": "musicode",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/musicode/react-native-pure-router/issues"
+  },
+  "homepage": "https://github.com/musicode/react-native-pure-router#readme",
+  "dependencies": {
+    "react-native-pure-button": "^2.0.2",
+    "react-native-pure-tabbar": "0.0.2"
+  }
+}
