@@ -40,6 +40,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
+  disabledButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    opacity: 0.5,
+  },
   headerSibling: {
     flex: 1,
     marginTop: NavigationHeader.HEIGHT,
@@ -86,10 +91,6 @@ export default class Router extends Component {
 
   state = {
     timestamp: 0,
-  }
-
-  componentWillUnmount() {
-    this.currentScene = null
   }
 
   getCurrentStack() {
@@ -276,15 +277,23 @@ export default class Router extends Component {
                     fontSize: navBarButtonFontSize,
                   }}
                   disabled={button.disabled}
+                  disabledStyle={styles.disabledButton}
                   disabledActiveOpacity={navBarButtonDisabledActiveOpacity}
                   disabledTextStyle={{
                     color: navBarButtonDisabledColor,
                     fontSize: navBarButtonDisabledFontSize,
                   }}
                   onPress={() => {
-                    if (typeof this.currentScene[id] === 'function') {
-                      this.currentScene[id]()
+
+                    let { ref } = this.getCurrentScene()
+                    if (ref.getWrappedInstance) {
+                      ref = ref.getWrappedInstance()
                     }
+
+                    if (ref && typeof ref[id] === 'function') {
+                      ref[id]()
+                    }
+
                   }}
                 >
                   {button.icon || button.title}
@@ -389,7 +398,7 @@ export default class Router extends Component {
         router={this}
         ref={ref => {
           if (ref) {
-            this.currentScene = ref
+            this.updateCurrentScene({ ref }, false)
           }
         }}
       />
