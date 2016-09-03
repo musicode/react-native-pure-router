@@ -39,10 +39,14 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: 8,
     paddingHorizontal: 14,
+  },
+  headerSibling: {
+    flex: 1,
+    marginTop: NavigationHeader.HEIGHT,
   }
 })
 
-export const defaultSceneStyle = {
+export let defaultSceneStyle = {
   navBarBackgroundColor: '#f7f7f7',
   navBarTextColor: '#000000',
   navBarTextFontSize: 20,
@@ -50,6 +54,8 @@ export const defaultSceneStyle = {
   navBarButtonFontSize: 18,
   navBarButtonDisabledColor: '#ccc',
   navBarButtonDisabledFontSize: 18,
+  navBarButtonActiveOpacity: 0.5,
+  navBarButtonDisabledActiveOpacity: 1,
   navBarHidden: false,
   navBarNoBorder: false,
   tabBarHidden: false,
@@ -57,8 +63,17 @@ export const defaultSceneStyle = {
   statusBarTextColorScheme: 'dark',
 }
 
-function getSceneStyle(sceneStyle) {
-  return Object.assign({}, defaultSceneStyle, sceneStyle)
+function getSceneStyle(staticSceneStyle, instanceSceneStyle) {
+  return Object.assign({}, defaultSceneStyle, staticSceneStyle, instanceSceneStyle)
+}
+
+function getComponent(scene) {
+  return registeredScenes[scene]
+}
+
+function getOriginalComponent(scene) {
+  let Component = getComponent(scene)
+  return Component.WrappedComponent || Component
 }
 
 export default class Router extends Component {
@@ -69,22 +84,156 @@ export default class Router extends Component {
     onBack: PropTypes.func.isRequired,
   }
 
+  state = {
+    timestamp: 0,
+  }
+
   componentWillUnmount() {
     this.currentScene = null
   }
 
+  getCurrentStack() {
+    let { routerState } = this.props
+    if (routerState.tabs) {
+      let { index, routes } = routerState.tabs
+      return routerState[routes[index].key]
+    }
+    else {
+      return routerState
+    }
+  }
+
+  getCurrentScene() {
+    let currentStack = this.getCurrentStack()
+    return currentStack.routes[currentStack.index]
+  }
+
+  getCurrentSceneStyle() {
+    let currentScene = this.getCurrentScene()
+    let { sceneStyle } = getOriginalComponent(currentScene.key)
+    return getSceneStyle(sceneStyle, currentScene.sceneStyle)
+  }
+
+  updateCurrentScene(data, needRefresh = true) {
+    let currentScene = this.getCurrentScene()
+    Object.assign(currentScene, data)
+    if (needRefresh) {
+      this.refresh()
+    }
+  }
+
+  refresh() {
+    this.setState({
+      timestamp: Date.now(),
+    })
+  }
+
+  setTitle(title = '') {
+    this.updateCurrentScene({
+      sceneTitle: title,
+    })
+  }
+
+  setLeftButtons(leftButtons) {
+    this.updateCurrentScene({
+      sceneLeftButtons: leftButtons,
+    })
+  }
+
+  setRightButtons(rightButtons) {
+    this.updateCurrentScene({
+      sceneRightButtons: rightButtons,
+    })
+  }
+
+  setTabBadge(badge, tabIndex) {
+    let { routerState } = this.props
+    let { tabs } = routerState
+    if (tabs) {
+      if (tabIndex == null) {
+        tabIndex = tabs.index
+      }
+      tabs.routes[tabIndex].badge = badge
+      this.refresh()
+    }
+  }
+
+  showNavBar() {
+    this.updateCurrentScene({
+      navBarHidden: false,
+    })
+  }
+
+  hideNavBar() {
+    this.updateCurrentScene({
+      navBarHidden: true,
+    })
+  }
+
+  showTabBar() {
+    this.setState({
+      tabBarHidden: false,
+    })
+  }
+
+  hideTabBar() {
+    this.setState({
+      tabBarHidden: true,
+    })
+  }
+
+  switchToTab(tabIndex) {
+    let { tabs } = this.props.routerState
+    if (tabs) {
+      let { route } = this.props
+      route({
+        type: actionType.TAB_CHANGE,
+        tab: tabs.routes[tabIndex].key,
+      })
+    }
+  }
+
+  pop() {
+    let { onBack } = this.props
+    onBack()
+  }
+
+  popToRoot() {
+    let { route } = this.props
+    route({
+      type: action.SCENE_JUMP,
+      index: 0,
+    })
+  }
+
+  push(data) {
+    let { route } = this.props
+    route({
+      type: actionType.SCENE_PUSH,
+      scene: data.scene,
+      sceneTitle: data.sceneTitle,
+      sceneStyle: data.sceneStyle,
+      passProps: data.passProps,
+    })
+  }
+
   renderTitle = sceneProps => {
 
+    let currentScene = this.getCurrentScene()
     let {
+      key,
       sceneTitle,
-      sceneStyle,
-    } = registeredScenes[sceneProps.scene.route.key]
+    } = currentScene
+
+    if (!sceneTitle) {
+      sceneTitle = getOriginalComponent(key).sceneTitle
+    }
 
     if (typeof sceneTitle === 'string') {
       let {
         navBarTextColor,
         navBarTextFontSize,
-      } = getSceneStyle(sceneStyle)
+      } = this.getCurrentSceneStyle()
       return (
         <NavigationHeader.Title textStyle={{
           color: navBarTextColor,
@@ -105,7 +254,9 @@ export default class Router extends Component {
         navBarButtonFontSize,
         navBarButtonDisabledColor,
         navBarButtonDisabledFontSize,
-      } = getSceneStyle(sceneStyle)
+        navBarButtonActiveOpacity,
+        navBarButtonDisabledActiveOpacity,
+      } = sceneStyle
 
       return (
         <View style={styles.buttons}>
@@ -119,14 +270,16 @@ export default class Router extends Component {
                 <Button
                   key={"button" + button.id}
                   style={styles.button}
-                  disabled={button.disabled}
-                  disabledTextStyle={{
-                    color: navBarButtonDisabledColor,
-                    fontSize: navBarButtonDisabledFontSize,
-                  }}
+                  activeOpacity={navBarButtonActiveOpacity}
                   textStyle={{
                     color: navBarButtonColor,
                     fontSize: navBarButtonFontSize,
+                  }}
+                  disabled={button.disabled}
+                  disabledActiveOpacity={navBarButtonDisabledActiveOpacity}
+                  disabledTextStyle={{
+                    color: navBarButtonDisabledColor,
+                    fontSize: navBarButtonDisabledFontSize,
                   }}
                   onPress={() => {
                     if (typeof this.currentScene[id] === 'function') {
@@ -144,30 +297,45 @@ export default class Router extends Component {
     }
   }
 
-  renderLeftButtons = sceneProps => {
+  renderLeftButtons = () => {
 
+    let currentScene = this.getCurrentScene()
     let {
-      sceneStyle,
+      key,
       sceneLeftButtons,
-    } = registeredScenes[sceneProps.scene.route.key]
+    } = currentScene
 
-    return this.renderButtons(sceneLeftButtons, sceneStyle)
+    if (!sceneLeftButtons) {
+      sceneLeftButtons = getOriginalComponent(key).sceneLeftButtons
+    }
+
+    return this.renderButtons(
+      sceneLeftButtons,
+      this.getCurrentSceneStyle()
+    )
 
   }
 
-  renderRightButtons = sceneProps => {
+  renderRightButtons = () => {
 
+    let currentScene = this.getCurrentScene()
     let {
-      sceneStyle,
+      key,
       sceneRightButtons,
-    } = registeredScenes[sceneProps.scene.route.key]
+    } = currentScene
 
-    return this.renderButtons(sceneRightButtons, sceneStyle)
+    if (!sceneRightButtons) {
+      sceneRightButtons = getOriginalComponent(key).sceneRightButtons
+    }
+
+    return this.renderButtons(
+      sceneRightButtons,
+      this.getCurrentSceneStyle()
+    )
 
   }
 
   renderHeader = sceneProps => {
-    let { sceneStyle } = registeredScenes[sceneProps.scene.route.key]
 
     let {
       navBarHidden,
@@ -175,15 +343,19 @@ export default class Router extends Component {
       navBarNoBorder,
       statusBarHidden,
       statusBarTextColorScheme,
-    } = getSceneStyle(sceneStyle)
+    } = this.getCurrentSceneStyle()
 
-    if (statusBarHidden) {
+    if (statusBarHidden !== this.statusBarHidden) {
+      this.statusBarHidden = statusBarHidden
       StatusBar.setHidden(statusBarHidden)
     }
 
-    StatusBar.setBarStyle(
-      statusBarTextColorScheme === 'dark' ? 'default' : 'light-content'
-    )
+    if (statusBarTextColorScheme !== this.statusBarTextColorScheme) {
+      this.statusBarTextColorScheme = statusBarTextColorScheme
+      StatusBar.setBarStyle(
+        statusBarTextColorScheme === 'dark' ? 'default' : 'light-content'
+      )
+    }
 
     if (!navBarHidden) {
       let style = {
@@ -206,92 +378,109 @@ export default class Router extends Component {
   }
 
   renderScene = sceneProps => {
-    let Component = registeredScenes[sceneProps.scene.route.key]
-    return (
-      <Component ref={ref => {
-        if (ref) {
-          this.currentScene = ref
-        }
-      }}
+
+    let {
+      navBarHidden,
+    } = this.getCurrentSceneStyle()
+
+    let Component = getComponent(this.getCurrentScene().key)
+    let component = (
+      <Component
+        router={this}
+        ref={ref => {
+          if (ref) {
+            this.currentScene = ref
+          }
+        }}
       />
+    )
+
+    if (navBarHidden) {
+      return component
+    }
+
+    return (
+      <View style={styles.headerSibling}>
+        {component}
+      </View>
+    )
+
+  }
+
+  renderTabs() {
+    let { routerState, route } = this.props
+    let { index, routes } = routerState.tabs
+    return (
+      <TabBar>
+        {
+          routes.map((item, i) => {
+            return (
+              <TabBar.Item
+                key={item.key}
+                selected={i === index}
+
+                title={item.title}
+                titleStyle={item.titleStyle}
+                selectedTitleStyle={item.selectedTitleStyle}
+                renderTitle={item.renderTitle}
+
+                badge={item.badge}
+                renderBadge={item.renderBadge}
+
+                renderIcon={item.renderIcon}
+
+                style={item.style}
+                selectedsTyle={item.selectedStyle}
+
+                onPress={() => route({
+                  type: actionType.TAB_CHANGE,
+                  tab: item.key
+                })}
+              />
+            )
+          })
+        }
+      </TabBar>
     )
   }
 
   render() {
+
     let {
       routerState,
       route,
       onBack,
     } = this.props
+
+    let currentStack = this.getCurrentStack()
+    let stackElement = (
+      <NavigationCardStack
+        onNavigateBack={onBack}
+        navigationState={currentStack}
+        renderOverlay={this.renderHeader}
+        renderScene={this.renderScene}
+        style={styles.container}
+      />
+    )
+
     if (routerState.tabs) {
-      let { index, routes } = routerState.tabs
-      let navigationState = routerState[routes[index].key]
-      let { sceneStyle } = registeredScenes[
-        navigationState.routes[navigationState.index].key
-      ]
 
       let {
         tabBarHidden,
-      } = getSceneStyle(sceneStyle)
+      } = this.getCurrentSceneStyle()
 
-      let tabBarElement
-      if (!tabBarHidden) {
-        tabBarElement = (
-          <TabBar>
-            {
-              routes.map((item, i) => {
-                return (
-                  <TabBar.Item
-                    key={item.key}
-                    selected={i === index}
-
-                    title={item.title}
-                    titleStyle={item.titleStyle}
-                    selectedTitleStyle={item.selectedTitleStyle}
-                    renderTitle={item.renderTitle}
-
-                    badge={item.badge}
-                    renderBadge={item.renderBadge}
-
-                    renderIcon={item.renderIcon}
-
-                    style={item.style}
-                    selectedsTyle={item.selectedStyle}
-
-                    onPress={() => route({
-                      type: actionType.TAB_CHANGE,
-                      tab: item.key
-                    })}
-                  />
-                )
-              })
-            }
-          </TabBar>
+      return tabBarHidden
+        ? stackElement
+        : (
+          <View style={styles.container}>
+            {stackElement}
+            {this.renderTabs()}
+          </View>
         )
-      }
 
-      return (
-        <View style={styles.container}>
-          <NavigationCardStack
-            onNavigateBack={onBack}
-            navigationState={navigationState}
-            renderOverlay={this.renderHeader}
-            renderScene={this.renderScene}
-            style={styles.container}
-          />
-          {tabBarElement}
-        </View>
-      )
     }
     else {
-      return (
-        <NavigationCardStack
-          onNavigateBack={onBack}
-          navigationState={routerState}
-          renderOverlay={this.renderHeader}
-          renderScene={this.renderScene}
-        />
-      )
+      return stackElement
     }
   }
 

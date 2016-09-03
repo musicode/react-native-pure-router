@@ -6,7 +6,6 @@ import React, {
 } from 'react'
 
 import {
-  Text,
   Platform,
   BackAndroid,
   NavigationExperimental,
@@ -23,6 +22,9 @@ export default class App extends Component {
 
   static propTypes = {
     tabs: PropTypes.array,
+    scene: PropTypes.string,
+    sceneStyle: PropTypes.object,
+    dispatch: PropTypes.func,
   }
 
   constructor(props, context) {
@@ -58,10 +60,15 @@ export default class App extends Component {
     else {
       router = {
         index: 0,
-        routes: [ ],
+        routes: [
+          {
+            key: props.scene,
+            sceneStyle: props.sceneStyle,
+          }
+        ],
       }
     }
-console.log('init', router)
+
     this.state = {
       router,
     }
@@ -79,7 +86,7 @@ console.log('init', router)
 
   handleBackPress = () => {
     return this.route({
-      type: actionType.SCENE_POP
+      type: actionType.SCENE_POP,
     })
   }
 
@@ -87,8 +94,11 @@ console.log('init', router)
 
     let {
       type,
-      scene,
       tab,
+      index,
+      scene,
+      sceneTitle,
+      sceneStyle,
     } = action
 
     let {
@@ -122,7 +132,11 @@ console.log('init', router)
     switch (type) {
       case actionType.SCENE_PUSH:
         router = getRouter(
-          NavigationStateUtils.push(currentStack, { key: scene })
+          NavigationStateUtils.push(currentStack, {
+            key: scene,
+            sceneTitle,
+            sceneStyle,
+          })
         )
         break
 
@@ -131,6 +145,19 @@ console.log('init', router)
           router = getRouter(
             NavigationStateUtils.pop(currentStack)
           )
+        }
+        break
+
+      case actionType.SCENE_JUMP:
+        let newStack
+        if (scene) {
+          newStack = NavigationStateUtils.jumpTo(currentStack, scene)
+        }
+        else if (index != null) {
+          newStack = NavigationStateUtils.jumpToIndex(currentStack, index)
+        }
+        if (newStack) {
+          router = getRouter(newStack)
         }
         break
 
@@ -148,6 +175,10 @@ console.log('init', router)
 console.log(action, router)
     if (this.state.router !== router) {
       this.setState({ router })
+      let { dispatch } = this.props
+      if (typeof dispatch === 'function') {
+        dispatch(action)
+      }
       return true
     }
 
