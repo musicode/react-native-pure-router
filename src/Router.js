@@ -18,14 +18,16 @@ let {
   Header: NavigationHeader,
 } = NavigationExperimental
 
-import TabBar from 'react-native-pure-tabbar'
+import TabBar from 'react-native-tab-navigator'
 import Button from 'react-native-pure-button'
 
-import * as actionType from './actionType'
+import stack from './stack'
+import actionType from './actionType'
 
 import {
   registeredScenes,
 } from './registerScene'
+
 
 const styles = StyleSheet.create({
   container: {
@@ -53,12 +55,12 @@ const styles = StyleSheet.create({
 
 export let defaultSceneStyle = {
   navBarBackgroundColor: '#f7f7f7',
-  navBarTextColor: '#000000',
-  navBarTextFontSize: 20,
+  navBarTextColor: '#333',
+  navBarTextFontSize: 18,
   navBarButtonColor: '#007aff',
-  navBarButtonFontSize: 18,
+  navBarButtonFontSize: 16,
   navBarButtonDisabledColor: '#ccc',
-  navBarButtonDisabledFontSize: 18,
+  navBarButtonDisabledFontSize: 16,
   navBarButtonActiveOpacity: 0.5,
   navBarButtonDisabledActiveOpacity: 1,
   navBarHidden: false,
@@ -93,20 +95,8 @@ export default class Router extends Component {
     timestamp: 0,
   }
 
-  getCurrentStack() {
-    let { routerState } = this.props
-    if (routerState.tabs) {
-      let { index, routes } = routerState.tabs
-      return routerState[routes[index].key]
-    }
-    else {
-      return routerState
-    }
-  }
-
   getCurrentScene() {
-    let currentStack = this.getCurrentStack()
-    return currentStack.routes[currentStack.index]
+    return stack.getCurrentScene(this.props.routerState)
   }
 
   getCurrentSceneStyle() {
@@ -116,8 +106,8 @@ export default class Router extends Component {
   }
 
   updateCurrentScene(data, needRefresh = true) {
-    let currentScene = this.getCurrentScene()
-    Object.assign(currentScene, data)
+    console.log('update scene', data, needRefresh)
+    stack.updateCurrentScene(this.props.routerState, data)
     if (needRefresh) {
       this.refresh()
     }
@@ -135,10 +125,15 @@ export default class Router extends Component {
     })
   }
 
-  setLeftButtons(leftButtons) {
-    this.updateCurrentScene({
-      sceneLeftButtons: leftButtons,
-    })
+  setButtons(buttons) {
+    let data = { }
+    if ('sceneLeftButtons' in buttons) {
+      data.sceneLeftButtons = buttons.sceneLeftButtons
+    }
+    if ('sceneRightButtons' in buttons) {
+      data.sceneRightButtons = buttons.sceneRightButtons
+    }
+    this.updateCurrentScene(data)
   }
 
   setRightButtons(rightButtons) {
@@ -214,7 +209,7 @@ export default class Router extends Component {
       scene: data.scene,
       sceneTitle: data.sceneTitle,
       sceneStyle: data.sceneStyle,
-      passProps: data.passProps,
+      sceneProps: data.sceneProps,
     })
   }
 
@@ -285,11 +280,7 @@ export default class Router extends Component {
                   }}
                   onPress={() => {
 
-                    let { ref } = this.getCurrentScene()
-                    if (ref.getWrappedInstance) {
-                      ref = ref.getWrappedInstance()
-                    }
-
+                    let ref = stack.getCurrentSceneRef(this.props.routerState)
                     if (ref && typeof ref[id] === 'function') {
                       ref[id]()
                     }
@@ -318,6 +309,7 @@ export default class Router extends Component {
       sceneLeftButtons = getOriginalComponent(key).sceneLeftButtons
     }
 
+console.log('renderLeftButtons')
     return this.renderButtons(
       sceneLeftButtons,
       this.getCurrentSceneStyle()
@@ -336,7 +328,7 @@ export default class Router extends Component {
     if (!sceneRightButtons) {
       sceneRightButtons = getOriginalComponent(key).sceneRightButtons
     }
-
+console.log('renderRightButtons')
     return this.renderButtons(
       sceneRightButtons,
       this.getCurrentSceneStyle()
@@ -353,14 +345,11 @@ export default class Router extends Component {
       statusBarHidden,
       statusBarTextColorScheme,
     } = this.getCurrentSceneStyle()
+console.log('render header')
 
-    if (statusBarHidden !== this.statusBarHidden) {
-      this.statusBarHidden = statusBarHidden
-      StatusBar.setHidden(statusBarHidden)
-    }
+    StatusBar.setHidden(statusBarHidden)
 
-    if (statusBarTextColorScheme !== this.statusBarTextColorScheme) {
-      this.statusBarTextColorScheme = statusBarTextColorScheme
+    if (!statusBarHidden) {
       StatusBar.setBarStyle(
         statusBarTextColorScheme === 'dark' ? 'default' : 'light-content'
       )
@@ -386,15 +375,21 @@ export default class Router extends Component {
 
   }
 
-  renderScene = sceneProps => {
+  renderScene = () => {
 
     let {
       navBarHidden,
     } = this.getCurrentSceneStyle()
 
-    let Component = getComponent(this.getCurrentScene().key)
+    let {
+      key,
+      sceneProps = {},
+    } = this.getCurrentScene()
+console.log('renderScene')
+    let Component = getComponent(key)
     let component = (
       <Component
+        {...sceneProps}
         router={this}
         ref={ref => {
           if (ref) {
@@ -416,8 +411,22 @@ export default class Router extends Component {
 
   }
 
+  renderStack(state, onBack) {
+    let { timestamp } = this.state
+    return (
+      <NavigationCardStack
+        timestamp={timestamp}
+        onNavigateBack={onBack}
+        navigationState={state}
+        renderOverlay={this.renderHeader}
+        renderScene={this.renderScene}
+        style={styles.container}
+      />
+    )
+  }
+
   renderTabs() {
-    let { routerState, route } = this.props
+    let { routerState, route, onBack } = this.props
     let { index, routes } = routerState.tabs
     return (
       <TabBar>
@@ -425,7 +434,7 @@ export default class Router extends Component {
           routes.map((item, i) => {
             return (
               <TabBar.Item
-                key={item.key}
+                key={item.scene}
                 selected={i === index}
 
                 title={item.title}
@@ -433,19 +442,21 @@ export default class Router extends Component {
                 selectedTitleStyle={item.selectedTitleStyle}
                 renderTitle={item.renderTitle}
 
-                badge={item.badge}
+                badgeText={item.badge}
                 renderBadge={item.renderBadge}
 
                 renderIcon={item.renderIcon}
 
                 style={item.style}
-                selectedsTyle={item.selectedStyle}
+                selectedStyle={item.selectedStyle}
 
                 onPress={() => route({
                   type: actionType.TAB_CHANGE,
-                  tab: item.key
+                  tab: item.scene
                 })}
-              />
+              >
+                {this.renderStack(routerState[item.scene], onBack)}
+              </TabBar.Item>
             )
           })
         }
@@ -461,17 +472,9 @@ export default class Router extends Component {
       onBack,
     } = this.props
 
-    let currentStack = this.getCurrentStack()
-    let stackElement = (
-      <NavigationCardStack
-        onNavigateBack={onBack}
-        navigationState={currentStack}
-        renderOverlay={this.renderHeader}
-        renderScene={this.renderScene}
-        style={styles.container}
-      />
-    )
-
+    let currentStack = stack.getCurrentStack(routerState)
+    let stackElement = this.renderStack(currentStack, onBack)
+console.log('render router')
     if (routerState.tabs) {
 
       let {
@@ -480,12 +483,7 @@ export default class Router extends Component {
 
       return tabBarHidden
         ? stackElement
-        : (
-          <View style={styles.container}>
-            {stackElement}
-            {this.renderTabs()}
-          </View>
-        )
+        : this.renderTabs()
 
     }
     else {

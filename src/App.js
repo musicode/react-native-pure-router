@@ -16,7 +16,9 @@ let {
 } = NavigationExperimental
 
 import Router from './Router'
-import * as actionType from './actionType'
+
+import stack from './stack'
+import actionType from './actionType'
 
 export default class App extends Component {
 
@@ -84,6 +86,20 @@ export default class App extends Component {
     }
   }
 
+  componentWillUpdate() {
+    let ref = stack.getCurrentSceneRef(this.state.router)
+    if (ref && typeof ref.componentWillFocus === 'function') {
+      ref.componentWillFocus()
+    }
+  }
+
+  componentDidUpdate() {
+    let ref = stack.getCurrentSceneRef(this.state.router)
+    if (ref && typeof ref.componentDidFocus === 'function') {
+      ref.componentDidFocus()
+    }
+  }
+
   handleBackPress = () => {
     return this.route({
       type: actionType.SCENE_POP,
@@ -99,32 +115,18 @@ export default class App extends Component {
       scene,
       sceneTitle,
       sceneStyle,
+      sceneProps,
     } = action
 
     let {
       router,
     } = this.state
 
-    let currentStackKey
-    let currentStack = router
-
-    let { tabs } = router
-    if (tabs) {
-      currentStackKey = tabs.routes[tabs.index].key
-      currentStack = router[currentStackKey]
-    }
+    let currentStack = stack.getCurrentStack(router)
 
     let getRouter = newStack => {
       if (newStack !== currentStack) {
-        if (currentStackKey) {
-          return {
-            ...router,
-            [currentStackKey]: newStack,
-          }
-        }
-        else {
-          return newStack
-        }
+        return stack.updateCurrentStack(router, newStack)
       }
       return router
     }
@@ -136,6 +138,7 @@ export default class App extends Component {
             key: scene,
             sceneTitle,
             sceneStyle,
+            sceneProps,
           })
         )
         break
@@ -162,8 +165,8 @@ export default class App extends Component {
         break
 
       case actionType.TAB_CHANGE:
-        let newTabs = NavigationStateUtils.jumpTo(tabs, tab)
-        if (newTabs !== tabs) {
+        let newTabs = NavigationStateUtils.jumpTo(router.tabs, tab)
+        if (newTabs !== router.tabs) {
           router = {
             ...router,
             tabs: newTabs,
@@ -178,6 +181,10 @@ console.log(action, router)
       let { dispatch } = this.props
       if (typeof dispatch === 'function') {
         dispatch(action)
+        dispatch({
+          type: actionType.SCENE_FOCUS,
+          scene: stack.getCurrentScene(router).key,
+        })
       }
       return true
     }
