@@ -15,6 +15,7 @@ import {
 
 let {
   CardStack: NavigationCardStack,
+  Card: NavigationCard,
   Header: NavigationHeader,
 } = NavigationExperimental
 
@@ -210,6 +211,7 @@ export default class Router extends Component {
       sceneTitle: data.sceneTitle,
       sceneStyle: data.sceneStyle,
       sceneProps: data.sceneProps,
+      direction: data.direction,
     })
   }
 
@@ -345,7 +347,6 @@ console.log('renderRightButtons')
       statusBarHidden,
       statusBarTextColorScheme,
     } = this.getCurrentSceneStyle()
-console.log('render header')
 
     StatusBar.setHidden(statusBarHidden)
 
@@ -413,9 +414,11 @@ console.log('renderScene')
 
   renderStack(state, onBack) {
     let { timestamp } = this.state
+    let direction = this.getCurrentScene().direction || 'horizontal'
     return (
       <NavigationCardStack
         timestamp={timestamp}
+        direction={direction}
         onNavigateBack={onBack}
         navigationState={state}
         renderOverlay={this.renderHeader}

@@ -118,6 +118,7 @@ export default class App extends Component {
       sceneTitle,
       sceneStyle,
       sceneProps,
+      direction,
     } = action
 
     let {
@@ -141,6 +142,7 @@ export default class App extends Component {
             sceneTitle,
             sceneStyle,
             sceneProps,
+            direction,
           })
         )
         break
@@ -178,6 +180,7 @@ export default class App extends Component {
     }
 
 console.log(action, router)
+
     if (this.state.router !== router) {
       this.setState({ router })
       let { dispatch } = this.props
@@ -199,6 +202,7 @@ console.log(action, router)
     let { router } = this.state
     return (
       <Router
+        ref={ref => global.router = ref}
         routerState={router}
         route={this.route}
         onBack={this.handleBackPress}
