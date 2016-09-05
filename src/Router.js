@@ -15,7 +15,6 @@ import {
 
 let {
   CardStack: NavigationCardStack,
-  Card: NavigationCard,
   Header: NavigationHeader,
 } = NavigationExperimental
 
@@ -54,7 +53,7 @@ const styles = StyleSheet.create({
   }
 })
 
-export let defaultSceneStyle = {
+export let defaultAppStyle = {
   navBarBackgroundColor: '#f7f7f7',
   navBarTextColor: '#333',
   navBarTextFontSize: 18,
@@ -71,8 +70,8 @@ export let defaultSceneStyle = {
   statusBarTextColorScheme: 'dark',
 }
 
-function getSceneStyle(staticSceneStyle, instanceSceneStyle) {
-  return Object.assign({}, defaultSceneStyle, staticSceneStyle, instanceSceneStyle)
+function getAppStyle(staticAppStyle, instanceAppStyle) {
+  return Object.assign({}, defaultAppStyle, staticAppStyle, instanceAppStyle)
 }
 
 function getComponent(scene) {
@@ -100,14 +99,14 @@ export default class Router extends Component {
     return stack.getCurrentScene(this.props.routerState)
   }
 
-  getCurrentSceneStyle() {
+  getCurrentAppStyle() {
     let currentScene = this.getCurrentScene()
-    let { sceneStyle } = getOriginalComponent(currentScene.key)
-    return getSceneStyle(sceneStyle, currentScene.sceneStyle)
+    let { appStyle } = getOriginalComponent(currentScene.key)
+    return getAppStyle(appStyle, currentScene.appStyle)
   }
 
   updateCurrentScene(data, needRefresh = true) {
-    console.log('update scene', data, needRefresh)
+    // console.log('update scene', data, needRefresh)
     stack.updateCurrentScene(this.props.routerState, data)
     if (needRefresh) {
       this.refresh()
@@ -122,25 +121,12 @@ export default class Router extends Component {
 
   setTitle(title = '') {
     this.updateCurrentScene({
-      sceneTitle: title,
+      title: title,
     })
   }
 
   setButtons(buttons) {
-    let data = { }
-    if ('sceneLeftButtons' in buttons) {
-      data.sceneLeftButtons = buttons.sceneLeftButtons
-    }
-    if ('sceneRightButtons' in buttons) {
-      data.sceneRightButtons = buttons.sceneRightButtons
-    }
-    this.updateCurrentScene(data)
-  }
-
-  setRightButtons(rightButtons) {
-    this.updateCurrentScene({
-      sceneRightButtons: rightButtons,
-    })
+    this.updateCurrentScene(buttons)
   }
 
   setTabBadge(badge, tabIndex) {
@@ -208,9 +194,9 @@ export default class Router extends Component {
     route({
       type: actionType.SCENE_PUSH,
       scene: data.scene,
-      sceneTitle: data.sceneTitle,
-      sceneStyle: data.sceneStyle,
-      sceneProps: data.sceneProps,
+      title: data.title,
+      appStyle: data.appStyle,
+      passProps: data.passProps,
       direction: data.direction,
     })
   }
@@ -220,31 +206,31 @@ export default class Router extends Component {
     let currentScene = this.getCurrentScene()
     let {
       key,
-      sceneTitle,
+      title,
     } = currentScene
 
-    if (!sceneTitle) {
-      sceneTitle = getOriginalComponent(key).sceneTitle
+    if (!title) {
+      title = getOriginalComponent(key).title
     }
 
-    if (typeof sceneTitle === 'string') {
+    if (typeof title === 'string') {
       let {
         navBarTextColor,
         navBarTextFontSize,
-      } = this.getCurrentSceneStyle()
+      } = this.getCurrentAppStyle()
       return (
         <NavigationHeader.Title textStyle={{
           color: navBarTextColor,
           fontSize: navBarTextFontSize,
         }}>
-          {sceneTitle}
+          {title}
         </NavigationHeader.Title>
       )
     }
 
   }
 
-  renderButtons(buttons, sceneStyle) {
+  renderButtons(buttons, appStyle) {
     if (Array.isArray(buttons) && buttons.length > 0) {
 
       let {
@@ -254,7 +240,7 @@ export default class Router extends Component {
         navBarButtonDisabledFontSize,
         navBarButtonActiveOpacity,
         navBarButtonDisabledActiveOpacity,
-      } = sceneStyle
+      } = appStyle
 
       return (
         <View style={styles.buttons}>
@@ -304,17 +290,17 @@ export default class Router extends Component {
     let currentScene = this.getCurrentScene()
     let {
       key,
-      sceneLeftButtons,
+      leftButtons,
     } = currentScene
 
-    if (!sceneLeftButtons) {
-      sceneLeftButtons = getOriginalComponent(key).sceneLeftButtons
+    if (!leftButtons) {
+      leftButtons = getOriginalComponent(key).leftButtons
     }
 
-console.log('renderLeftButtons')
+// console.log('renderLeftButtons')
     return this.renderButtons(
-      sceneLeftButtons,
-      this.getCurrentSceneStyle()
+      leftButtons,
+      this.getCurrentAppStyle()
     )
 
   }
@@ -324,16 +310,16 @@ console.log('renderLeftButtons')
     let currentScene = this.getCurrentScene()
     let {
       key,
-      sceneRightButtons,
+      rightButtons,
     } = currentScene
 
-    if (!sceneRightButtons) {
-      sceneRightButtons = getOriginalComponent(key).sceneRightButtons
+    if (!rightButtons) {
+      rightButtons = getOriginalComponent(key).rightButtons
     }
-console.log('renderRightButtons')
+// console.log('renderRightButtons')
     return this.renderButtons(
-      sceneRightButtons,
-      this.getCurrentSceneStyle()
+      rightButtons,
+      this.getCurrentAppStyle()
     )
 
   }
@@ -346,7 +332,7 @@ console.log('renderRightButtons')
       navBarNoBorder,
       statusBarHidden,
       statusBarTextColorScheme,
-    } = this.getCurrentSceneStyle()
+    } = this.getCurrentAppStyle()
 
     StatusBar.setHidden(statusBarHidden)
 
@@ -380,18 +366,18 @@ console.log('renderRightButtons')
 
     let {
       navBarHidden,
-    } = this.getCurrentSceneStyle()
+    } = this.getCurrentAppStyle()
 
     let {
       key,
-      sceneProps = {},
+      passProps = {},
     } = this.getCurrentScene()
-console.log('renderScene')
+// console.log('renderScene')
     let Component = getComponent(key)
     let component = (
       <Component
-        {...sceneProps}
-        router={this}
+        {...passProps}
+        navigator={this}
         ref={ref => {
           if (ref) {
             this.updateCurrentScene({ ref }, false)
@@ -449,6 +435,7 @@ console.log('renderScene')
                 renderBadge={item.renderBadge}
 
                 renderIcon={item.renderIcon}
+                renderSelectedIcon={() => item.renderIcon(true)}
 
                 style={item.style}
                 selectedStyle={item.selectedStyle}
@@ -477,12 +464,12 @@ console.log('renderScene')
 
     let currentStack = stack.getCurrentStack(routerState)
     let stackElement = this.renderStack(currentStack, onBack)
-console.log('render router')
+// console.log('render router')
     if (routerState.tabs) {
 
       let {
         tabBarHidden,
-      } = this.getCurrentSceneStyle()
+      } = this.getCurrentAppStyle()
 
       return tabBarHidden
         ? stackElement

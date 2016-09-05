@@ -25,7 +25,7 @@ export default class App extends Component {
   static propTypes = {
     tabs: PropTypes.array,
     scene: PropTypes.string,
-    sceneStyle: PropTypes.object,
+    appStyle: PropTypes.object,
     dispatch: PropTypes.func,
   }
 
@@ -65,7 +65,7 @@ export default class App extends Component {
         routes: [
           {
             key: props.scene,
-            sceneStyle: props.sceneStyle,
+            appStyle: props.appStyle,
           }
         ],
       }
@@ -115,9 +115,9 @@ export default class App extends Component {
       tab,
       index,
       scene,
-      sceneTitle,
-      sceneStyle,
-      sceneProps,
+      title,
+      appStyle,
+      passProps,
       direction,
     } = action
 
@@ -139,9 +139,9 @@ export default class App extends Component {
         router = getRouter(
           NavigationStateUtils.push(currentStack, {
             key: scene,
-            sceneTitle,
-            sceneStyle,
-            sceneProps,
+            title,
+            appStyle,
+            passProps,
             direction,
           })
         )
@@ -202,7 +202,7 @@ console.log(action, router)
     let { router } = this.state
     return (
       <Router
-        ref={ref => global.router = ref}
+        ref={ref => global.Router = ref}
         routerState={router}
         route={this.route}
         onBack={this.handleBackPress}
