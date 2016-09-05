@@ -86,18 +86,20 @@ export default class App extends Component {
     }
   }
 
+  componentWillMount() {
+    stack.callCurrentScene(this.state.router, 'componentWillFocus')
+  }
+
+  componentDidMount() {
+    stack.callCurrentScene(this.state.router, 'componentDidFocus')
+  }
+
   componentWillUpdate() {
-    let ref = stack.getCurrentSceneRef(this.state.router)
-    if (ref && typeof ref.componentWillFocus === 'function') {
-      ref.componentWillFocus()
-    }
+    stack.callCurrentScene(this.state.router, 'componentWillFocus')
   }
 
   componentDidUpdate() {
-    let ref = stack.getCurrentSceneRef(this.state.router)
-    if (ref && typeof ref.componentDidFocus === 'function') {
-      ref.componentDidFocus()
-    }
+    stack.callCurrentScene(this.state.router, 'componentDidFocus')
   }
 
   handleBackPress = () => {

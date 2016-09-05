@@ -280,10 +280,10 @@ export default class Router extends Component {
                   }}
                   onPress={() => {
 
-                    let ref = stack.getCurrentSceneRef(this.props.routerState)
-                    if (ref && typeof ref[id] === 'function') {
-                      ref[id]()
-                    }
+                    stack.callCurrentScene(
+                      this.props.routerState,
+                      id
+                    )
 
                   }}
                 >

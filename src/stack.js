@@ -18,24 +18,6 @@ function getCurrentStack(routerState) {
   return routerState
 }
 
-function getCurrentScene(routerState) {
-  let currentStack = getCurrentStack(routerState)
-  return currentStack.routes[currentStack.index]
-}
-
-function getCurrentSceneRef(routerState) {
-  let { ref } = getCurrentScene(routerState)
-  if (ref && ref.getWrappedInstance) {
-    ref = ref.getWrappedInstance()
-  }
-  return ref
-}
-
-function updateCurrentScene(routerState, data) {
-  let currentScene = getCurrentScene(routerState)
-  Object.assign(currentScene, data)
-}
-
 function updateCurrentStack(routerState, newStack) {
   let currentStackKey = getCurrentStackKey(routerState)
   if (currentStackKey) {
@@ -47,11 +29,36 @@ function updateCurrentStack(routerState, newStack) {
   return newStack
 }
 
+function getCurrentScene(routerState) {
+  let currentStack = getCurrentStack(routerState)
+  return currentStack.routes[currentStack.index]
+}
+
+function updateCurrentScene(routerState, data) {
+  let currentScene = getCurrentScene(routerState)
+  Object.assign(currentScene, data)
+}
+
+function getCurrentSceneRef(routerState) {
+  let { ref } = getCurrentScene(routerState)
+  if (ref && ref.getWrappedInstance) {
+    ref = ref.getWrappedInstance()
+  }
+  return ref
+}
+
+function callCurrentScene(routerState, name) {
+  let ref = getCurrentSceneRef(routerState)
+  if (ref && ref[name]) {
+    ref[name]()
+  }
+}
+
 
 module.exports = {
   getCurrentStack,
   updateCurrentStack,
   getCurrentScene,
-  getCurrentSceneRef,
   updateCurrentScene,
+  callCurrentScene,
 }
