@@ -44,16 +44,11 @@ export default class App extends Component {
   }
 
   componentWillMount() {
-    let { dispatch } = this.props
-    let { navigation } = this.state
-    dispatch({
-      type: actionType.SCENE_FOCUS,
-      scene: stack.getCurrentScene(navigation).key,
-    })
-    stack.callCurrentScene(navigation, 'componentWillFocus')
+    stack.callCurrentScene(this.state.navigation, 'componentWillFocus')
   }
 
   componentDidMount() {
+    this.dispatchFocus()
     stack.callCurrentScene(this.state.navigation, 'componentDidFocus')
   }
 
@@ -62,6 +57,7 @@ export default class App extends Component {
   }
 
   componentDidUpdate() {
+    this.dispatchFocus()
     stack.callCurrentScene(this.state.navigation, 'componentDidFocus')
   }
 
@@ -120,6 +116,15 @@ export default class App extends Component {
       }
     }
 
+  }
+
+  dispatchFocus() {
+    let { dispatch } = this.props
+    let { navigation } = this.state
+    dispatch({
+      type: actionType.SCENE_FOCUS,
+      scene: stack.getCurrentScene(navigation).key,
+    })
   }
 
   handleBackPress = () => {
@@ -206,10 +211,6 @@ export default class App extends Component {
       let { dispatch } = this.props
       if (typeof dispatch === 'function') {
         dispatch(action)
-        dispatch({
-          type: actionType.SCENE_FOCUS,
-          scene: stack.getCurrentScene(navigation).key,
-        })
       }
       return true
     }
