@@ -15,7 +15,7 @@ let {
   StateUtils: NavigationStateUtils,
 } = NavigationExperimental
 
-import Router from './Router'
+import Navigator from './Navigator'
 
 import stack from './stack'
 import actionType from './actionType'
@@ -31,50 +31,7 @@ export default class App extends Component {
 
   constructor(props, context) {
     super(props, context)
-
-    let router
-    if (Array.isArray(props.tabs)) {
-      let tabs = {
-        index: 0,
-        routes: [ ],
-      }
-      router = {
-        tabs,
-      }
-      props.tabs.forEach((tab, index) => {
-        let { scene, selected } = tab
-        let current = { key: scene }
-        tabs.routes.push({
-          ...tab,
-          ...current,
-        })
-        router[scene] = {
-          index: 0,
-          routes: [
-            current
-          ],
-        }
-        if (selected) {
-          tabs.index = index
-        }
-      })
-    }
-    else {
-      router = {
-        index: 0,
-        routes: [
-          {
-            key: props.scene,
-            appStyle: props.appStyle,
-          }
-        ],
-      }
-    }
-
-    this.state = {
-      router,
-    }
-
+    this.formatState(props)
     if (Platform.OS === 'android') {
       BackAndroid.addEventListener('hardwareBackPress', this.handleBackPress)
     }
@@ -87,28 +44,91 @@ export default class App extends Component {
   }
 
   componentWillMount() {
-    stack.callCurrentScene(this.state.router, 'componentWillFocus')
+    let { dispatch } = this.props
+    let { navigation } = this.state
+    dispatch({
+      type: actionType.SCENE_FOCUS,
+      scene: stack.getCurrentScene(navigation).key,
+    })
+    stack.callCurrentScene(navigation, 'componentWillFocus')
   }
 
   componentDidMount() {
-    stack.callCurrentScene(this.state.router, 'componentDidFocus')
+    stack.callCurrentScene(this.state.navigation, 'componentDidFocus')
   }
 
   componentWillUpdate() {
-    stack.callCurrentScene(this.state.router, 'componentWillFocus')
+    stack.callCurrentScene(this.state.navigation, 'componentWillFocus')
   }
 
   componentDidUpdate() {
-    stack.callCurrentScene(this.state.router, 'componentDidFocus')
+    stack.callCurrentScene(this.state.navigation, 'componentDidFocus')
+  }
+
+  componentWillReceiveProps(nextProps) {
+    this.formatState(nextProps)
+  }
+
+  formatState(props) {
+    let navigation
+    if (Array.isArray(props.tabs)) {
+      let tabs = {
+        index: 0,
+        routes: [ ],
+      }
+      navigation = {
+        tabs,
+      }
+      props.tabs.forEach((tab, index) => {
+        let { scene, selected } = tab
+        let current = { key: scene }
+        tabs.routes.push({
+          ...tab,
+          ...current,
+        })
+        navigation[scene] = {
+          index: 0,
+          routes: [
+            current
+          ],
+        }
+        if (selected) {
+          tabs.index = index
+        }
+      })
+    }
+    else {
+      navigation = {
+        index: 0,
+        routes: [
+          {
+            key: props.scene,
+            appStyle: props.appStyle,
+          }
+        ],
+      }
+    }
+
+    if (this.state) {
+      this.setState({
+        navigation,
+      })
+    }
+    else {
+      this.state = {
+        navigation,
+      }
+    }
+
   }
 
   handleBackPress = () => {
-    return this.route({
+    return this.navigate({
       type: actionType.SCENE_POP,
     })
   }
 
-  route = action => {
+  navigate = action => {
 
     let {
       type,
@@ -122,21 +142,21 @@ export default class App extends Component {
     } = action
 
     let {
-      router,
+      navigation,
     } = this.state
 
-    let currentStack = stack.getCurrentStack(router)
+    let currentStack = stack.getCurrentStack(navigation)
 
-    let getRouter = newStack => {
+    let getNavigationState = newStack => {
       if (newStack !== currentStack) {
-        return stack.updateCurrentStack(router, newStack)
+        return stack.updateCurrentStack(navigation, newStack)
       }
-      return router
+      return newStack
     }
 
     switch (type) {
       case actionType.SCENE_PUSH:
-        router = getRouter(
+        navigation = getNavigationState(
           NavigationStateUtils.push(currentStack, {
             key: scene,
             title,
@@ -149,7 +169,7 @@ export default class App extends Component {
 
       case actionType.SCENE_POP:
         if (currentStack.index > 0) {
-          router = getRouter(
+          navigation = getNavigationState(
             NavigationStateUtils.pop(currentStack)
           )
         }
@@ -164,31 +184,31 @@ export default class App extends Component {
           newStack = NavigationStateUtils.jumpToIndex(currentStack, index)
         }
         if (newStack) {
-          router = getRouter(newStack)
+          navigation = getNavigationState(newStack)
         }
         break
 
       case actionType.TAB_CHANGE:
-        let newTabs = NavigationStateUtils.jumpTo(router.tabs, tab)
-        if (newTabs !== router.tabs) {
-          router = {
-            ...router,
+        let newTabs = NavigationStateUtils.jumpTo(navigation.tabs, tab)
+        if (newTabs !== navigation.tabs) {
+          navigation = {
+            ...navigation,
             tabs: newTabs,
           }
         }
         break
     }
 
-console.log(action, router)
+// console.log(action, navigation)
 
-    if (this.state.router !== router) {
-      this.setState({ router })
+    if (this.state.navigation !== navigation) {
+      this.setState({ navigation })
       let { dispatch } = this.props
       if (typeof dispatch === 'function') {
         dispatch(action)
         dispatch({
           type: actionType.SCENE_FOCUS,
-          scene: stack.getCurrentScene(router).key,
+          scene: stack.getCurrentScene(navigation).key,
         })
       }
       return true
@@ -199,12 +219,12 @@ console.log(action, router)
   }
 
   render() {
-    let { router } = this.state
+    let { navigation } = this.state
     return (
-      <Router
-        ref={ref => global.Router = ref}
-        routerState={router}
-        route={this.route}
+      <Navigator
+        ref={ref => global.Navigator = ref}
+        navigationState={navigation}
+        navigate={this.navigate}
         onBack={this.handleBackPress}
       />
     )

@@ -5,7 +5,7 @@ import registerScene from './src/registerScene'
 
 import {
   defaultAppStyle,
-} from './src/Router'
+} from './src/Navigator'
 
 import actionType from './src/actionType'
 

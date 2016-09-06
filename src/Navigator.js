@@ -46,10 +46,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     opacity: 0.5,
-  },
-  headerSibling: {
-    flex: 1,
-    marginTop: NavigationHeader.HEIGHT,
   }
 })
 
@@ -83,11 +79,11 @@ function getOriginalComponent(scene) {
   return Component.WrappedComponent || Component
 }
 
-export default class Router extends Component {
+export default class Navigator extends Component {
 
   static propTypes = {
-    routerState: PropTypes.object.isRequired,
-    route: PropTypes.func.isRequired,
+    navigationState: PropTypes.object.isRequired,
+    navigate: PropTypes.func.isRequired,
     onBack: PropTypes.func.isRequired,
   }
 
@@ -96,7 +92,7 @@ export default class Router extends Component {
   }
 
   getCurrentScene() {
-    return stack.getCurrentScene(this.props.routerState)
+    return stack.getCurrentScene(this.props.navigationState)
   }
 
   getCurrentAppStyle() {
@@ -107,7 +103,7 @@ export default class Router extends Component {
 
   updateCurrentScene(data, needRefresh = true) {
     // console.log('update scene', data, needRefresh)
-    stack.updateCurrentScene(this.props.routerState, data)
+    stack.updateCurrentScene(this.props.navigationState, data)
     if (needRefresh) {
       this.refresh()
     }
@@ -130,8 +126,8 @@ export default class Router extends Component {
   }
 
   setTabBadge(badge, tabIndex) {
-    let { routerState } = this.props
-    let { tabs } = routerState
+    let { navigationState } = this.props
+    let { tabs } = navigationState
     if (tabs) {
       if (tabIndex == null) {
         tabIndex = tabs.index
@@ -166,10 +162,10 @@ export default class Router extends Component {
   }
 
   switchToTab(tabIndex) {
-    let { tabs } = this.props.routerState
+    let { tabs } = this.props.navigationState
     if (tabs) {
-      let { route } = this.props
-      route({
+      let { navigate } = this.props
+      navigate({
         type: actionType.TAB_CHANGE,
         tab: tabs.routes[tabIndex].key,
       })
@@ -182,16 +178,16 @@ export default class Router extends Component {
   }
 
   popToRoot() {
-    let { route } = this.props
-    route({
+    let { navigate } = this.props
+    navigate({
       type: action.SCENE_JUMP,
       index: 0,
     })
   }
 
   push(data) {
-    let { route } = this.props
-    route({
+    let { navigate } = this.props
+    navigate({
       type: actionType.SCENE_PUSH,
       scene: data.scene,
       title: data.title,
@@ -269,7 +265,7 @@ export default class Router extends Component {
                   onPress={() => {
 
                     stack.callCurrentScene(
-                      this.props.routerState,
+                      this.props.navigationState,
                       id
                     )
 
@@ -374,7 +370,7 @@ export default class Router extends Component {
     } = this.getCurrentScene()
 // console.log('renderScene')
     let Component = getComponent(key)
-    let component = (
+    return (
       <Component
         {...passProps}
         navigator={this}
@@ -384,16 +380,6 @@ export default class Router extends Component {
           }
         }}
       />
-    )
-
-    if (navBarHidden) {
-      return component
-    }
-
-    return (
-      <View style={styles.headerSibling}>
-        {component}
-      </View>
     )
 
   }
@@ -407,7 +393,7 @@ export default class Router extends Component {
         direction={direction}
         onNavigateBack={onBack}
         navigationState={state}
-        renderOverlay={this.renderHeader}
+        renderHeader={this.renderHeader}
         renderScene={this.renderScene}
         style={styles.container}
       />
@@ -415,8 +401,8 @@ export default class Router extends Component {
   }
 
   renderTabs() {
-    let { routerState, route, onBack } = this.props
-    let { index, routes } = routerState.tabs
+    let { navigationState, navigate, onBack } = this.props
+    let { index, routes } = navigationState.tabs
     return (
       <TabBar>
         {
@@ -440,12 +426,12 @@ export default class Router extends Component {
                 style={item.style}
                 selectedStyle={item.selectedStyle}
 
-                onPress={() => route({
+                onPress={() => navigate({
                   type: actionType.TAB_CHANGE,
                   tab: item.scene
                 })}
               >
-                {this.renderStack(routerState[item.scene], onBack)}
+                {this.renderStack(navigationState[item.scene], onBack)}
               </TabBar.Item>
             )
           })
@@ -457,15 +443,14 @@ export default class Router extends Component {
   render() {
 
     let {
-      routerState,
-      route,
+      navigationState,
       onBack,
     } = this.props
 
-    let currentStack = stack.getCurrentStack(routerState)
+    let currentStack = stack.getCurrentStack(navigationState)
     let stackElement = this.renderStack(currentStack, onBack)
-// console.log('render router')
-    if (routerState.tabs) {
+// console.log('render navigator')
+    if (navigationState.tabs) {
 
       let {
         tabBarHidden,

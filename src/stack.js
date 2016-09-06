@@ -1,8 +1,8 @@
 'use strict'
 
-function getCurrentStackKey(routerState) {
-  if (routerState.tabs) {
-    let { index, routes } = routerState.tabs
+function getCurrentStackKey(navigationState) {
+  if (navigationState.tabs) {
+    let { index, routes } = navigationState.tabs
     return routes[index].key
   }
   else {
@@ -10,45 +10,45 @@ function getCurrentStackKey(routerState) {
   }
 }
 
-function getCurrentStack(routerState) {
-  let currentStackKey = getCurrentStackKey(routerState)
+function getCurrentStack(navigationState) {
+  let currentStackKey = getCurrentStackKey(navigationState)
   if (currentStackKey) {
-    return routerState[currentStackKey]
+    return navigationState[currentStackKey]
   }
-  return routerState
+  return navigationState
 }
 
-function updateCurrentStack(routerState, newStack) {
-  let currentStackKey = getCurrentStackKey(routerState)
+function updateCurrentStack(navigationState, newStack) {
+  let currentStackKey = getCurrentStackKey(navigationState)
   if (currentStackKey) {
     return {
-      ...routerState,
+      ...navigationState,
       [currentStackKey]: newStack
     }
   }
   return newStack
 }
 
-function getCurrentScene(routerState) {
-  let currentStack = getCurrentStack(routerState)
+function getCurrentScene(navigationState) {
+  let currentStack = getCurrentStack(navigationState)
   return currentStack.routes[currentStack.index]
 }
 
-function updateCurrentScene(routerState, data) {
-  let currentScene = getCurrentScene(routerState)
+function updateCurrentScene(navigationState, data) {
+  let currentScene = getCurrentScene(navigationState)
   Object.assign(currentScene, data)
 }
 
-function getCurrentSceneRef(routerState) {
-  let { ref } = getCurrentScene(routerState)
+function getCurrentSceneRef(navigationState) {
+  let { ref } = getCurrentScene(navigationState)
   if (ref && ref.getWrappedInstance) {
     ref = ref.getWrappedInstance()
   }
   return ref
 }
 
-function callCurrentScene(routerState, name) {
-  let ref = getCurrentSceneRef(routerState)
+function callCurrentScene(navigationState, name) {
+  let ref = getCurrentSceneRef(navigationState)
   if (ref && ref[name]) {
     ref[name]()
   }
