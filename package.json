@@ -1,6 +1,6 @@
 {
   "name": "react-native-pure-router",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "react native router",
   "main": "index.js",
   "scripts": {
@@ -23,6 +23,6 @@
   "homepage": "https://github.com/musicode/react-native-pure-router#readme",
   "dependencies": {
     "react-native-pure-button": "^2.0.2",
-    "react-native-pure-tabbar": "0.0.2"
+    "react-native-tab-navigator": "^0.3.3"
   }
 }

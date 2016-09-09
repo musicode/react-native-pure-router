@@ -10,6 +10,7 @@ import {
   View,
   StatusBar,
   StyleSheet,
+  Platform,
   NavigationExperimental,
 } from 'react-native'
 
@@ -28,6 +29,7 @@ import {
   registeredScenes,
 } from './registerScene'
 
+const isIOS = Platform.OS === 'ios'
 
 const styles = StyleSheet.create({
   container: {
@@ -150,24 +152,24 @@ export default class Navigator extends Component {
   }
 
   showTabBar() {
-    this.setState({
+    this.updateCurrentScene({
       tabBarHidden: false,
     })
   }
 
   hideTabBar() {
-    this.setState({
+    this.updateCurrentScene({
       tabBarHidden: true,
     })
   }
 
   switchToTab(tabIndex) {
-    let { tabs } = this.props.navigationState
-    if (tabs) {
+    let { navigationState, navigate } = this.props
+    if (navigationState.tabs) {
       let { navigate } = this.props
       navigate({
         type: actionType.TAB_CHANGE,
-        tab: tabs.routes[tabIndex].key,
+        tab: navigationState.tabs.routes[tabIndex].key,
       })
     }
   }
@@ -332,7 +334,7 @@ export default class Navigator extends Component {
 
     StatusBar.setHidden(statusBarHidden)
 
-    if (!statusBarHidden) {
+    if (!statusBarHidden && isIOS) {
       StatusBar.setBarStyle(
         statusBarTextColorScheme === 'dark' ? 'default' : 'light-content'
       )
