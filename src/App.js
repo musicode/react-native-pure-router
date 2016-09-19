@@ -159,6 +159,13 @@ export default class App extends Component {
       return newStack
     }
 
+    if (type === actionType.SCENE_PUSH) {
+      index = NavigationStateUtils.indexOf(currentStack, scene)
+      if (index !== -1) {
+        type = actionType.SCENE_JUMP
+      }
+    }
+
     switch (type) {
       case actionType.SCENE_PUSH:
         navigation = getNavigationState(
