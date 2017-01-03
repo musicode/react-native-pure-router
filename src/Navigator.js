@@ -182,7 +182,7 @@ export default class Navigator extends Component {
   popToRoot() {
     let { navigate } = this.props
     navigate({
-      type: action.SCENE_JUMP,
+      type: actionType.SCENE_JUMP,
       index: 0,
     })
   }
